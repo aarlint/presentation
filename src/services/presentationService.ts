@@ -142,30 +142,12 @@ export interface Presentation {
   pages: PresentationPage[];
 }
 
-export const generatePresentation = async (data: { presentation: Presentation }): Promise<void> => {
-  // Helper function to convert string percentages to numeric values for pptxgenjs
-  function convertPosition(pos: {x: string, y: string, w: string, h: string}) {
-    // Convert percentage strings (e.g., '10%') to numbers (e.g., 0.1)
-    const parsePercent = (value: string): number => {
-      if (typeof value === 'string' && value.endsWith('%')) {
-        return parseFloat(value) / 100;
-      }
-      return parseFloat(value);
-    };
-
-    return {
-      x: parsePercent(pos.x),
-      y: parsePercent(pos.y),
-      w: parsePercent(pos.w),
-      h: parsePercent(pos.h)
-    };
-  }
-  
+export const generatePresentation = async (data: { presentation: Presentation }): Promise<any> => {
   // Helper function to get PPT shape types
   function getShapeType() {
     return pptxgen.ShapeType;
   }
-
+  
   const pptx = new pptxgen();
   const { presentation } = data;
   const ShapeType = getShapeType();
@@ -215,53 +197,86 @@ export const generatePresentation = async (data: { presentation: Presentation })
           slide.background = { color: colors.bg };
         }
 
-        // Set slide title with improved styling
+        // Set slide title with improved styling and proper centering
         if (page.title) {
           slide.addText(page.title, {
-            x: 0.05,
-            y: 0.05,
-            w: 0.9,
-            h: 0.1,
+            x: 0.5,          // Start at center of slide
+            y: 0.5,          // Start at top of slide
+            w: 9,           // Width in inches (standard slide is ~10 inches wide)
+            h: 1,           // Height in inches
             fontSize: 28,
             bold: true,
             color: colors.text,
-            align: 'center',
+            align: 'center',  // Center text horizontally
+            valign: 'middle', // Center text vertically
           });
         }
 
-        // Add subtitle if present with improved styling
+        // Add subtitle if present with improved styling and proper centering
         if (page.subtitle) {
           slide.addText(page.subtitle, {
-            x: 0.05,
-            y: 0.15,
-            w: 0.9,
-            h: 0.05,
+            x: 0.5,          // Center of slide
+            y: page.title ? 1.5 : 0.5, // Below title if present
+            w: 9,           // Width in inches
+            h: 0.6,          // Height in inches
             fontSize: 20,
             color: colors.text,
-            align: 'center',
+            align: 'center',  // Center text horizontally
+            valign: 'middle', // Center text vertically
             italic: true,
           });
         }
 
-        // Calculate layout positions based on the layout type
+        // Calculate layout positions based on slide size (standard PPT slide is 10x7.5 inches)
+        const slideWidth = 10;  // 10 inches standard width
+        const slideHeight = 7.5; // 7.5 inches standard height
+        
         let layoutConfig = {
-          startY: page.subtitle ? 0.22 : 0.17,
-          contentHeight: 0.75,
+          startY: page.subtitle ? 2.2 : page.title ? 1.6 : 0.5, // Start below title/subtitle
+          contentHeight: 5,    // Content height in inches
+          contentWidth: 9,     // Content width in inches
+          leftMargin: 0.5,     // Left margin in inches
+          rightMargin: 0.5,    // Right margin in inches
+          bottomMargin: 0.5,   // Bottom margin in inches
+          spacing: 0.3,        // Space between elements in inches
         };
 
-        // Handle different layout types
+        // Handle different layout types with proper measurements
         switch (page.layout) {
           case 'grid':
-            // Grid layout will be handled per content element using gridArea
+            // Grid layout with fixed measurements
+            layoutConfig = {
+              startY: page.subtitle ? 2.2 : page.title ? 1.6 : 0.5,
+              contentHeight: 5,
+              contentWidth: 9,
+              leftMargin: 0.5,
+              rightMargin: 0.5,
+              bottomMargin: 0.5,
+              spacing: 0.2, // Grid spacing in inches
+            };
             break;
           case 'component-grid':
-            // Component-grid layout will be handled based on position property
+            // Component-grid layout with fixed measurements
+            layoutConfig = {
+              startY: page.subtitle ? 2.2 : page.title ? 1.6 : 0.5,
+              contentHeight: 5,
+              contentWidth: 9,
+              leftMargin: 0.5,
+              rightMargin: 0.5,
+              bottomMargin: 0.5,
+              spacing: 0.3,
+            };
             break;
           case 'two-column':
-            // Set up a two-column layout
+            // Two-column layout with fixed measurements
             layoutConfig = {
-              startY: page.subtitle ? 0.22 : 0.17,
-              contentHeight: 0.75,
+              startY: page.subtitle ? 2.2 : page.title ? 1.6 : 0.5,
+              contentHeight: 5,
+              contentWidth: 9,
+              leftMargin: 0.5,
+              rightMargin: 0.5,
+              bottomMargin: 0.5, 
+              spacing: 0.5, // Column spacing in inches
             };
             break;
           // Additional layout types can be implemented here
@@ -273,58 +288,116 @@ export const generatePresentation = async (data: { presentation: Presentation })
             const style = content.style || {};
             const alignment = (style.alignment as 'left' | 'center' | 'right') || 'left';
 
-            // Calculate default position - centered on slide with appropriate margins
+            // Calculate default position - centered on slide with appropriate measurements
             let position = {
-              x: '10%',  // Increased from 5% to provide better margins
-              y: `${layoutConfig.startY * 100}%`,
-              w: '80%',  // Reduced from 90% to provide better margins
-              h: `${layoutConfig.contentHeight * 100}%`,
+              x: layoutConfig.leftMargin,  // Left margin in inches
+              y: layoutConfig.startY,      // Start position in inches
+              w: layoutConfig.contentWidth, // Width in inches
+              h: layoutConfig.contentHeight, // Height in inches
             };
 
-            // Adjust positions for grid layouts
+            // Adjust positions for different content types
+            switch (content.type) {
+              case 'text':
+                position = {
+                  x: layoutConfig.leftMargin,
+                  y: layoutConfig.startY,
+                  w: layoutConfig.contentWidth,
+                  h: Math.min(3, layoutConfig.contentHeight), // Limit text height for better presentation
+                };
+                break;
+              case 'image':
+                position = {
+                  x: (slideWidth - 6) / 2, // Center image horizontally (6 inches width)
+                  y: layoutConfig.startY,
+                  w: 6, // Fixed width in inches
+                  h: 4, // Fixed height in inches
+                };
+                break;
+              // Default positions for other types can be specified here
+            }
+
+            // Adjust positions for grid layouts with fixed measurements
             if (page.layout === 'grid' && page.gridConfig && content.content.gridArea) {
               const { columnStart, columnEnd, rowStart, rowEnd } = content.content.gridArea;
               const totalColumns = page.gridConfig.columns || 12;
               
-              // Better grid calculations with margins
-              const availableWidth = 80; // 80% of slide width (10% margins on each side)
-              const colWidth = availableWidth / totalColumns;
-              const x = 10 + (columnStart - 1) * colWidth; // Start at 10% (left margin)
-              const w = (columnEnd - columnStart + 1) * colWidth;
+              // Grid calculations using fixed dimensions in inches
+              const availableWidth = layoutConfig.contentWidth;
+              const colSpacing = layoutConfig.spacing / totalColumns;
+              const effectiveColSpace = (availableWidth - (colSpacing * (totalColumns - 1))) / totalColumns;
               
-              // Better row calculation with proper spacing
-              const totalRows = Math.max(4, Math.ceil(page.content.length / totalColumns)); // Estimate row count based on content
-              const availableHeight = 70; // 70% of slide height for content
-              const rowHeight = availableHeight / totalRows;
+              const x = layoutConfig.leftMargin + (columnStart - 1) * (effectiveColSpace + colSpacing);
+              const w = (columnEnd - columnStart + 1) * effectiveColSpace + (columnEnd - columnStart) * colSpacing;
               
-              const y = layoutConfig.startY * 100 + (rowStart - 1) * rowHeight;
-              const h = (rowEnd - rowStart + 1) * rowHeight;
+              // Row calculation with fixed dimensions
+              const totalRows = Math.max(4, Math.ceil(page.content.length / totalColumns));
+              const rowSpacing = layoutConfig.spacing / 4; // Smaller row spacing
+              const effectiveRowHeight = (layoutConfig.contentHeight - (rowSpacing * (totalRows - 1))) / totalRows;
               
-              position = {
-                x: `${x}%`,
-                y: `${y}%`,
-                w: `${w}%`,
-                h: `${h}%`,
-              };
+              const y = layoutConfig.startY + (rowStart - 1) * (effectiveRowHeight + rowSpacing);
+              const h = (rowEnd - rowStart + 1) * effectiveRowHeight + (rowEnd - rowStart) * rowSpacing;
+              
+              position = { x, y, w, h };
             }
             
-            // Adjust positions for component-grid layouts with better spacing
+            // Adjust positions for component-grid layouts with fixed measurements
             if (page.layout === 'component-grid' && content.content.position) {
+              const halfWidth = (layoutConfig.contentWidth - layoutConfig.spacing) / 2;
+              
               switch(content.content.position) {
                 case 'left':
-                  position = { x: '10%', y: `${layoutConfig.startY * 100}%`, w: '38%', h: `${layoutConfig.contentHeight * 100}%` };
+                  position = { 
+                    x: layoutConfig.leftMargin, 
+                    y: layoutConfig.startY, 
+                    w: halfWidth, 
+                    h: layoutConfig.contentHeight 
+                  };
                   break;
                 case 'center':
-                  position = { x: '25%', y: `${layoutConfig.startY * 100}%`, w: '50%', h: `${layoutConfig.contentHeight * 100}%` };
+                  position = { 
+                    x: (slideWidth - layoutConfig.contentWidth) / 2, 
+                    y: layoutConfig.startY, 
+                    w: layoutConfig.contentWidth, 
+                    h: layoutConfig.contentHeight 
+                  };
                   break;
                 case 'right':
-                  position = { x: '52%', y: `${layoutConfig.startY * 100}%`, w: '38%', h: `${layoutConfig.contentHeight * 100}%` };
+                  position = { 
+                    x: slideWidth - layoutConfig.rightMargin - halfWidth, 
+                    y: layoutConfig.startY, 
+                    w: halfWidth, 
+                    h: layoutConfig.contentHeight 
+                  };
                   break;
               }
             }
 
-            // Convert string percentages to numbers for pptxgenjs
-            const pptxPosition = convertPosition(position);
+            // For two-column layout
+            if (page.layout === 'two-column') {
+              const contentIndex = page.content.indexOf(content);
+              const isLeftColumn = contentIndex % 2 === 0;
+              const halfWidth = (layoutConfig.contentWidth - layoutConfig.spacing) / 2;
+              
+              if (isLeftColumn) {
+                position = { 
+                  x: layoutConfig.leftMargin, 
+                  y: layoutConfig.startY, 
+                  w: halfWidth, 
+                  h: layoutConfig.contentHeight 
+                };
+              } else {
+                position = { 
+                  x: layoutConfig.leftMargin + halfWidth + layoutConfig.spacing, 
+                  y: layoutConfig.startY, 
+                  w: halfWidth, 
+                  h: layoutConfig.contentHeight 
+                };
+              }
+            }
+
+            // Convert from inch-based position to the expected format
+            const pptxPosition = position;
 
             // Special handling for component type
             if (content.type === 'component' && content.content.componentId) {
@@ -349,16 +422,37 @@ export const generatePresentation = async (data: { presentation: Presentation })
             switch (content.type) {
               case 'text':
                 if (content.content.text) {
-                  slide.addText(content.content.text, {
+                  // Improved text rendering with better position calculation
+                  const textOptions: any = {
                     ...pptxPosition,
                     fontSize: parseInt(style.fontSize || '16'),
                     align: alignment,
                     bold: style.fontWeight === 'bold',
                     wrap: true,
-                    valign: 'top',
-                    margin: 5,
+                    valign: 'middle',
+                    margin: [12, 15, 12, 15] as [number, number, number, number], // Increased margins
                     color: colors.text,
-                  });
+                    breakLine: true,
+                    charSpacing: 0.5, // Slightly increase character spacing
+                    lineSpacing: 1.5, // Significantly increase line spacing
+                    paraSpaceBefore: 5, // More space before paragraphs
+                    paraSpaceAfter: 5, // More space after paragraphs
+                    indentLevel: 0 // No indentation by default
+                  };
+                  
+                  // Adjust text position based on content length
+                  if (content.content.text.length > 500) {
+                    textOptions.valign = 'top';
+                    textOptions.paraSpaceBefore = 8;
+                    textOptions.paraSpaceAfter = 8;
+                  }
+                  
+                  // Handle paragraphs better - replace single newlines with spaces, keep double newlines
+                  let formattedText = content.content.text
+                    .replace(/([^\n])\n([^\n])/g, '$1 $2')  // Replace single newlines with spaces
+                    .replace(/\n\n/g, '\n \n');  // Keep double newlines with extra spacing
+                  
+                  slide.addText(formattedText, textOptions);
                 }
                 break;
 
@@ -404,80 +498,36 @@ export const generatePresentation = async (data: { presentation: Presentation })
                 }
                 break;
 
-              case 'table':
-                if (content.content.tableData) {
-                  slide.addTable(content.content.tableData, {
-                    ...pptxPosition,
-                    border: { pt: 1, color: '000000' },
-                    fontSize: parseInt(style.fontSize || '14'),
-                    color: colors.text,
-                    align: alignment,
-                    rowH: 0.3, // Set consistent row height
-                    autoPage: true, // Auto paginate large tables
-                    colW: Array(content.content.tableData[0]?.length || 1).fill(pptxPosition.w / (content.content.tableData[0]?.length || 1)),
-                  });
-                }
-                break;
-
-              case 'chart':
-                if (content.content.chartData) {
-                  const { labels, values, type } = content.content.chartData;
-                  const chartData = labels.map((label, index) => ({
-                    name: label,
-                    labels: [label],
-                    values: [values[index]],
-                  }));
-                  
-                  // Map custom chart types to pptxgenjs supported types
-                  const chartTypeMap: Record<string, string> = {
-                    'bar': 'bar',
-                    'line': 'line',
-                    'pie': 'pie',
-                    'doughnut': 'doughnut',
-                    'radar': 'radar',
-                    'scatter': 'scatter',
-                    'bubble': 'bubble'
-                  };
-                  
-                  const pptxChartType = chartTypeMap[type] || 'bar';
-                  
-                  // Enhanced chart styling with theme colors
-                  slide.addChart(pptxChartType as any, chartData, {
-                    ...pptxPosition,
-                    chartColors: ['3F97F6', '8AC2FF', '96A5D9', '2E75B5', '5B9BD5', '6DAEDB'],
-                    border: { pt: 1, color: 'DDDDDD' },
-                    shadow: { type: 'outer', angle: 45, blur: 2, offset: 2, color: 'CCCCCC' },
-                    dataLabelColor: colors.text,
-                    dataLabelFontSize: 10,
-                    legendPos: 'b', // Bottom legend position
-                    showTitle: true,
-                    title: content.content.chartData.type.charAt(0).toUpperCase() + content.content.chartData.type.slice(1) + ' Chart',
-                    chartColorsOpacity: 80,
-                  });
-                }
-                break;
-
               case 'list':
                 if (content.content.listItems) {
-                  const listItems = content.content.listItems.map((item, index) => {
-                    const prefix = content.content.listType === 'numbered' 
-                      ? `${index + 1}. ` 
-                      : content.content.listType === 'check'
-                      ? '✓ '
-                      : '• ';
-                    return prefix + item;
-                  }).join('\n');
-
-                  slide.addText(listItems, {
-                    ...pptxPosition,
-                    fontSize: parseInt(style.fontSize || '16'),
-                    align: alignment,
-                    wrap: true,
-                    valign: 'top',
-                    margin: 5,
-                    lineSpacing: 1.2, // Add some line spacing for readability
-                    color: colors.text,
-                  });
+                  // Create slide bullets instead of formatting the text manually
+                  if (content.content.listItems.length > 0) {
+                    // Create a placeholder for the list with proper padding
+                    slide.addText('', {
+                      ...pptxPosition,
+                      h: 0.01, // Very small height placeholder
+                    });
+                    
+                    // Add each list item as a separate text object with bullet formatting
+                    content.content.listItems.forEach((item, idx) => {
+                      slide.addText(item, {
+                        x: pptxPosition.x + 0.2, // Indent for bullet
+                        y: pptxPosition.y + (idx * 0.4), // Space items vertically
+                        w: pptxPosition.w - 0.4,
+                        h: 0.35,
+                        fontSize: parseInt(style.fontSize || '16'),
+                        bullet: true,
+                        align: alignment,
+                        color: colors.text,
+                        valign: 'middle',
+                        margin: [5, 5, 5, 10] as [number, number, number, number],
+                        paraSpaceBefore: 5,
+                        paraSpaceAfter: 5,
+                        charSpacing: 0.3,
+                        lineSpacing: 1.3,
+                      });
+                    });
+                  }
                 }
                 break;
 
@@ -491,34 +541,42 @@ export const generatePresentation = async (data: { presentation: Presentation })
                     shadow: { type: 'outer', blur: 3, offset: 2, color: 'CCCCCC', angle: 45 }
                   });
                   
-                  const quoteY = pptxPosition.y + 0.05; // Add some top padding
-                  const quoteH = pptxPosition.h - 0.15; // Reduce height to make room for author
+                  // Better positioning for quote text with increased padding
+                  const quoteY = pptxPosition.y + 0.08; // Further increased top padding
+                  const quoteH = pptxPosition.h - 0.22; // Better height adjustment for author
                   
-                  slide.addText(`"${content.content.quoteText}"`, {
-                    x: pptxPosition.x + 0.03,
+                  // Format the quote text for better readability
+                  let formattedQuoteText = content.content.quoteText
+                    .replace(/([^\n])\n([^\n])/g, '$1 $2')  // Replace single newlines with spaces
+                    .replace(/\n\n/g, '\n \n');  // Keep double newlines with extra spacing
+                  
+                  slide.addText(`"${formattedQuoteText}"`, {
+                    x: pptxPosition.x + 0.08, // Increased left padding
                     y: quoteY,
-                    w: pptxPosition.w - 0.06,
+                    w: pptxPosition.w - 0.16, // Increased horizontal padding
                     h: quoteH,
                     fontSize: parseInt(style.fontSize || '20'),
                     align: 'center',
                     italic: true,
                     valign: 'middle',
-                    margin: 10,
+                    margin: [20, 20, 20, 20] as [number, number, number, number], // Better margins for quote
                     wrap: true,
                     color: '333333',
+                    lineSpacing: 1.8, // Better line spacing for quotes
+                    charSpacing: 0.5, // Add character spacing
                   });
                   
                   if (content.content.quoteAuthor) {
-                    const authorY = pptxPosition.y + pptxPosition.h - 0.08;
+                    const authorY = pptxPosition.y + pptxPosition.h - 0.12; // Better author positioning
                     slide.addText(`- ${content.content.quoteAuthor}`, {
-                      x: pptxPosition.x,
+                      x: pptxPosition.x + 0.08, // Align with quote content
                       y: authorY,
-                      w: pptxPosition.w,
-                      h: 0.08,
+                      w: pptxPosition.w - 0.16, // Match width with quote content
+                      h: 0.1,
                       fontSize: parseInt(style.fontSize || '16'),
                       align: 'right',
                       color: '666666',
-                      margin: [0, 10, 0, 0], // Right margin
+                      margin: [0, 25, 0, 0] as [number, number, number, number], // Right margin
                     });
                   }
                 }
@@ -526,25 +584,27 @@ export const generatePresentation = async (data: { presentation: Presentation })
 
               case 'code':
                 if (content.content.code) {
-                  // Add a background for code with border
+                  // Add a background for code with border and better padding
                   slide.addShape(ShapeType.rect, {
                     ...pptxPosition,
                     fill: { color: 'F8F8F8' },
                     line: { color: 'E0E0E0', width: 1 },
                   });
                   
+                  // Better code text placement with improved padding and mono font
                   slide.addText(content.content.code, {
-                    x: pptxPosition.x + 0.02,
-                    y: pptxPosition.y + 0.02,
-                    w: pptxPosition.w - 0.04,
-                    h: pptxPosition.h - 0.04,
+                    x: pptxPosition.x + 0.05, // Further increased padding
+                    y: pptxPosition.y + 0.05, // Further increased padding
+                    w: pptxPosition.w - 0.1, // Further increased padding
+                    h: pptxPosition.h - 0.1, // Further increased padding
                     fontSize: parseInt(style.fontSize || '14'),
-                    align: alignment,
+                    align: 'left', // Code is always left-aligned
                     fontFace: 'Courier New',
                     wrap: true,
                     valign: 'top',
-                    margin: 5,
-                    lineSpacing: 1.1,
+                    margin: [12, 12, 12, 12] as [number, number, number, number], // Better margins for code
+                    lineSpacing: 1.4, // Increased line spacing for code readability
+                    charSpacing: 0.4, // Add some character spacing for code readability
                     color: '333333',
                   });
                 }
@@ -749,12 +809,12 @@ export const generatePresentation = async (data: { presentation: Presentation })
             console.warn(`Error rendering content item: ${content.type}`, error);
             
             // Add error placeholder for the content
-            const pptxPosition = convertPosition({
-              x: '10%',
-              y: `${layoutConfig.startY * 100}%`,
-              w: '80%',
-              h: '10%',
-            });
+            const pptxPosition = {
+              x: layoutConfig.leftMargin,
+              y: layoutConfig.startY,
+              w: layoutConfig.contentWidth,
+              h: 1 // 1 inch height for error message
+            };
             
             slide.addText(`[Error rendering ${content.type}]`, {
               ...pptxPosition,
@@ -765,75 +825,44 @@ export const generatePresentation = async (data: { presentation: Presentation })
             });
           }
         }
-      } catch (pageError) {
-        console.error(`Error processing slide with title: ${page.title || 'Untitled'}`, pageError);
-        // Add an error slide
-        const errorSlide = pptx.addSlide();
-        errorSlide.addText(`Error creating slide: ${page.title || 'Untitled'}`, {
-          x: 0.1,
-          y: 0.4,
-          w: 0.8,
-          h: 0.2,
-          fontSize: 24,
-          color: 'FF0000',
-          align: 'center',
-          bold: true,
-        });
+      } catch (error) {
+        console.warn(`Error rendering slide: ${page.layout}`, error);
       }
     }
-
-    // Save the presentation
-    await pptx.writeFile({ fileName: `${presentation.metadata.title}.pptx` });
-  } catch (error: any) {
-    console.error('Error generating presentation:', error);
-    
-    // Clear any existing slides to start fresh
-    const slides = (pptx as any).getSlides();
-    const slideCount = slides.length;
-    for (let i = 0; i < slideCount; i++) {
-      (pptx as any).removeSlide(0);
-    }
-    
-    // Add a title slide with error information
-    const errorSlide = pptx.addSlide();
-    
-    // Add a title with error message
-    errorSlide.addText('Error Generating Presentation', {
-      x: 0.5,
-      y: 0.3,
-      w: 9,
-      h: 1,
-      align: 'center',
-      fontSize: 44,
-      color: '666666',
-      bold: true
-    });
-    
-    // Add error details
-    errorSlide.addText(`An error occurred while generating your presentation:\n${error.message || 'Unknown error'}`, {
-      x: 0.5,
-      y: 3,
-      w: 9,
-      h: 2,
-      align: 'center',
-      fontSize: 20,
-      color: 'CC0000'
-    });
-    
-    // Add instruction text
-    errorSlide.addText('Please check your presentation data and try again. If this error persists, contact support.', {
-      x: 0.5,
-      y: 5,
-      w: 9,
-      h: 1,
-      align: 'center',
-      fontSize: 16,
-      color: '333333'
-    });
+  } catch (error) {
+    console.warn('Error generating presentation', error);
+    throw error; // Rethrow error so the UI can handle it
   }
   
-  // Save the presentation to file
-  await pptx.writeFile({ fileName: `${presentation.metadata.title || 'Presentation'}.pptx` });
+  // Save the presentation to file - fix the download issue
+  // In browser context, pptxgenjs has a different API for file downloads
+  return new Promise<Blob>((resolve, reject) => {
+    // @ts-ignore - TypeScript definitions might not match the actual browser API
+    pptx.write('blob').then((blob: Blob) => {
+      // Create a URL for the blob
+      const url = URL.createObjectURL(blob);
+      
+      // Create a link element to download the file
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${presentation.metadata.title || 'Presentation'}.pptx`;
+      
+      // Append to body, click and remove to trigger download
+      document.body.appendChild(link);
+      link.click();
+      
+      // Clean up
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 100);
+      
+      resolve(blob);
+    }).catch((error: any) => {
+      console.error('Error writing presentation file:', error);
+      reject(error);
+    });
+  });
 };
 
 // Helper function to add a component to a slide
@@ -852,16 +881,37 @@ function addComponentToSlide(
   switch (component.type) {
     case 'text':
       if (component.content.text) {
-        slide.addText(component.content.text, {
+        // Improved component text rendering
+        const textOptions: any = {
           ...position,
           fontSize: parseInt(style.fontSize || '16'),
           align: alignment,
           bold: style.fontWeight === 'bold',
           wrap: true,
-          valign: 'top',
-          margin: 5,
+          valign: 'middle',
+          margin: [12, 15, 12, 15] as [number, number, number, number], // Increased margins
           color: textColor,
-        });
+          breakLine: true,
+          charSpacing: 0.5, // Slightly increase character spacing
+          lineSpacing: 1.5, // Significantly increase line spacing
+          paraSpaceBefore: 5, // More space before paragraphs
+          paraSpaceAfter: 5, // More space after paragraphs
+          indentLevel: 0 // No indentation by default
+        };
+        
+        // Adjust text position based on content length
+        if (component.content.text.length > 500) {
+          textOptions.valign = 'top';
+          textOptions.paraSpaceBefore = 8;
+          textOptions.paraSpaceAfter = 8;
+        }
+        
+        // Handle paragraphs better - replace single newlines with spaces, keep double newlines
+        let formattedText = component.content.text
+          .replace(/([^\n])\n([^\n])/g, '$1 $2')  // Replace single newlines with spaces
+          .replace(/\n\n/g, '\n \n');  // Keep double newlines with extra spacing
+        
+        slide.addText(formattedText, textOptions);
       }
       break;
 
@@ -906,58 +956,6 @@ function addComponentToSlide(
       }
       break;
 
-    case 'table':
-      if (component.content.tableData) {
-        slide.addTable(component.content.tableData, {
-          ...position,
-          border: { pt: 1, color: '000000' },
-          fontSize: parseInt(style.fontSize || '14'),
-          color: textColor,
-          align: alignment,
-          rowH: 0.3, // Set consistent row height
-          autoPage: true, // Auto paginate large tables
-          colW: Array(component.content.tableData[0]?.length || 1).fill(position.w / (component.content.tableData[0]?.length || 1)),
-        });
-      }
-      break;
-
-    case 'chart':
-      if (component.content.chartData) {
-        const { labels, values, type } = component.content.chartData;
-        const chartData = labels.map((label, index) => ({
-          name: label,
-          labels: [label],
-          values: [values[index]],
-        }));
-        
-        const chartTypeMap: Record<string, string> = {
-          'bar': 'bar',
-          'line': 'line',
-          'pie': 'pie',
-          'doughnut': 'doughnut',
-          'radar': 'radar',
-          'scatter': 'scatter',
-          'bubble': 'bubble'
-        };
-        
-        const pptxChartType = chartTypeMap[type] || 'bar';
-        
-        // Enhanced chart styling
-        slide.addChart(pptxChartType as any, chartData, {
-          ...position,
-          chartColors: ['3F97F6', '8AC2FF', '96A5D9', '2E75B5', '5B9BD5', '6DAEDB'],
-          border: { pt: 1, color: 'DDDDDD' },
-          shadow: { type: 'outer', angle: 45, blur: 2, offset: 2, color: 'CCCCCC' },
-          dataLabelColor: textColor,
-          dataLabelFontSize: 10,
-          legendPos: 'b', // Bottom legend position
-          showTitle: true,
-          title: component.content.chartData.type.charAt(0).toUpperCase() + component.content.chartData.type.slice(1) + ' Chart',
-          chartColorsOpacity: 80,
-        });
-      }
-      break;
-
     case 'list':
       if (component.content.listItems) {
         const listItems = component.content.listItems.map((item, index) => {
@@ -967,7 +965,7 @@ function addComponentToSlide(
             ? '✓ '
             : '• ';
           return prefix + item;
-        }).join('\n');
+        }).join('\n\n'); // Double newline for better spacing between items
 
         slide.addText(listItems, {
           ...position,
@@ -975,181 +973,18 @@ function addComponentToSlide(
           align: alignment,
           wrap: true,
           valign: 'top',
-          margin: 5,
-          lineSpacing: 1.2,
+          margin: [15, 20, 15, 20] as [number, number, number, number], // Further increased margins for lists
+          lineSpacing: 1.6, // Better line spacing for list readability
           color: textColor,
+          paraSpaceBefore: 8, // More space before paragraphs
+          paraSpaceAfter: 8, // More space after paragraphs
+          indentLevel: 1, // Add indentation for better list appearance
+          bullet: { type: component.content.listType === 'bullet' ? 'bullet' : 'number' }
         });
       }
       break;
 
-    case 'quote':
-      if (component.content.quoteText) {
-        // Add a decorative quote background
-        slide.addShape(ShapeType.rect, {
-          ...position,
-          fill: { color: 'F5F5F5' },
-          line: { color: 'DDDDDD', width: 1 },
-          shadow: { type: 'outer', blur: 3, offset: 2, color: 'CCCCCC', angle: 45 }
-        });
-        
-        const quoteY = position.y + 0.05; // Add some top padding
-        const quoteH = position.h - 0.15; // Reduce height to make room for author
-        
-        slide.addText(`"${component.content.quoteText}"`, {
-          x: position.x + 0.03,
-          y: quoteY,
-          w: position.w - 0.06,
-          h: quoteH,
-          fontSize: parseInt(style.fontSize || '20'),
-          align: 'center',
-          italic: true,
-          valign: 'middle',
-          margin: 10,
-          wrap: true,
-          color: textColor,
-        });
-        
-        if (component.content.quoteAuthor) {
-          const authorY = position.y + position.h - 0.08;
-          slide.addText(`- ${component.content.quoteAuthor}`, {
-            x: position.x,
-            y: authorY,
-            w: position.w,
-            h: 0.08,
-            fontSize: parseInt(style.fontSize || '16'),
-            align: 'right',
-            color: '666666',
-            margin: [0, 10, 0, 0], // Right margin
-          });
-        }
-      }
-      break;
-
-    case 'code':
-      if (component.content.code) {
-        slide.addText(component.content.code, {
-          ...position,
-          fontSize: parseInt(style.fontSize || '14'),
-          align: alignment,
-          fontFace: 'Courier New',
-          wrap: true,
-          valign: 'top',
-          margin: 5,
-          lineSpacing: 1.1,
-          color: textColor,
-        });
-      }
-      break;
-
-    case 'timeline':
-      if (component.content.timelineEvents) {
-        // Create a better formatted representation of timeline events
-        const timelineText = component.content.timelineEvents
-          .map((event, index) => `${index + 1}. ${event.date}: ${event.event}`)
-          .join('\n\n');
-        
-        slide.addText(timelineText, {
-          ...position,
-          fontSize: parseInt(style.fontSize || '16'),
-          align: 'left',
-          wrap: true,
-          valign: 'top',
-          margin: 5,
-          lineSpacing: 1.3,
-          color: textColor,
-        });
-      }
-      break;
-
-    case 'process':
-      if (component.content.processSteps) {
-        // Create a text representation of process steps with better spacing
-        const processText = component.content.processSteps
-          .map((step, index) => `${index+1}. ${step.title}: ${step.description}`)
-          .join('\n\n');
-        
-        slide.addText(processText, {
-          ...position,
-          fontSize: parseInt(style.fontSize || '16'),
-          align: 'left',
-          wrap: true,
-          valign: 'top',
-          margin: 5,
-          lineSpacing: 1.3,
-          color: textColor,
-        });
-      }
-      break;
-
-    case 'comparison':
-      if (component.content.comparisonItems) {
-        // Create a two-column comparison text
-        const comparisonItem1 = component.content.comparisonItems[0];
-        const comparisonItem2 = component.content.comparisonItems.length > 1 ? 
-          component.content.comparisonItems[1] : null;
-        
-        if (comparisonItem1 && comparisonItem2) {
-          const leftX = position.x;
-          const width = position.w / 2;
-          
-          // Left side
-          slide.addText(comparisonItem1.title, {
-            x: leftX,
-            y: position.y,
-            w: width,
-            h: 0.1,
-            fontSize: parseInt(style.fontSize || '18'),
-            align: 'center',
-            bold: true,
-            color: textColor,
-          });
-          
-          const featuresText1 = comparisonItem1.features.map((f: string) => `• ${f}`).join('\n');
-          slide.addText(featuresText1, {
-            x: leftX,
-            y: position.y + 0.1,
-            w: width,
-            h: position.h - 0.1,
-            fontSize: parseInt(style.fontSize || '16'),
-            align: 'left',
-            wrap: true,
-            valign: 'top',
-            margin: 5,
-            lineSpacing: 1.2,
-            color: textColor,
-          });
-          
-          // Right side
-          slide.addText(comparisonItem2.title, {
-            x: leftX + width,
-            y: position.y,
-            w: width,
-            h: 0.1,
-            fontSize: parseInt(style.fontSize || '18'),
-            align: 'center',
-            bold: true,
-            color: textColor,
-          });
-          
-          const featuresText2 = comparisonItem2.features.map((f: string) => `• ${f}`).join('\n');
-          slide.addText(featuresText2, {
-            x: leftX + width,
-            y: position.y + 0.1,
-            w: width,
-            h: position.h - 0.1,
-            fontSize: parseInt(style.fontSize || '16'),
-            align: 'left',
-            wrap: true,
-            valign: 'top',
-            margin: 5,
-            lineSpacing: 1.2,
-            color: textColor,
-          });
-        }
-      }
-      break;
-
-    // Handle other component types as needed
+    // Add other component type handlers here
     default:
       // For unsupported types, add a placeholder text
       slide.addText(`[Component: ${component.id} - ${component.type}]`, {

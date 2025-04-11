@@ -123,12 +123,19 @@ const HomePage: React.FC = () => {
     if (!validateJson(editorContent)) return;
 
     setLoading(true);
+    setSnackbarMessage('Generating presentation...');
+    setSnackbarOpen(true);
+    
     try {
-      await generatePresentation(JSON.parse(editorContent));
-      setSnackbarMessage('Presentation generated successfully! Check your downloads folder.');
+      // Wait for the presentation to be generated and download to start
+      const blob = await generatePresentation(JSON.parse(editorContent));
+      
+      // Success message after download starts
+      setSnackbarMessage('Presentation downloaded successfully!');
       setSnackbarOpen(true);
     } catch (error) {
-      setError('Failed to generate presentation');
+      console.error('Error generating presentation:', error);
+      setError('Failed to generate presentation. Please check your JSON structure and try again.');
       setShowError(true);
     } finally {
       setLoading(false);
