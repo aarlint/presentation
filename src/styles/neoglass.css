@@ -1,19 +1,40 @@
-.neoglass {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-  border-radius: 10px;
+:root {
+  --glass-bg-light: rgba(255, 255, 255, 0.1);
+  --glass-bg-dark: rgba(0, 0, 0, 0.2);
+  --glass-border-light: rgba(0, 0, 0, 0.1);
+  --glass-border-dark: rgba(255, 255, 255, 0.1);
+  --glass-shadow-light: rgba(0, 0, 0, 0.1);
+  --glass-shadow-dark: rgba(0, 0, 0, 0.37);
+  --glass-hover-shadow-light: rgba(0, 0, 0, 0.2);
+  --glass-hover-shadow-dark: rgba(31, 38, 135, 0.45);
+  --text-color-light: #333;
+  --text-color-dark: #fff;
 }
 
-.neoglass-dark {
-  background: rgba(0, 0, 0, 0.2);
+[data-theme="light"] {
+  --glass-bg: var(--glass-bg-light);
+  --glass-border: var(--glass-border-light);
+  --glass-shadow: var(--glass-shadow-light);
+  --glass-hover-shadow: var(--glass-hover-shadow-light);
+  --text-color: var(--text-color-light);
+}
+
+[data-theme="dark"] {
+  --glass-bg: var(--glass-bg-dark);
+  --glass-border: var(--glass-border-dark);
+  --glass-shadow: var(--glass-shadow-dark);
+  --glass-hover-shadow: var(--glass-hover-shadow-dark);
+  --text-color: var(--text-color-dark);
+}
+
+.neoglass {
+  background: var(--glass-bg);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px 0 var(--glass-shadow);
   border-radius: 10px;
+  color: var(--text-color);
 }
 
 .neoglass-hover {
@@ -22,59 +43,60 @@
 
 .neoglass-hover:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.45);
+  box-shadow: 0 12px 40px 0 var(--glass-hover-shadow);
 }
 
 .neoglass-button {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--glass-bg);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px 0 var(--glass-shadow);
   border-radius: 10px;
   padding: 10px 20px;
-  color: white;
+  color: var(--text-color);
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
 .neoglass-button:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--glass-bg);
   transform: translateY(-2px);
-  box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.45);
+  box-shadow: 0 12px 40px 0 var(--glass-hover-shadow);
 }
 
 .neoglass-input {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--glass-bg);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--glass-border);
   border-radius: 10px;
   padding: 12px;
-  color: white;
+  color: var(--text-color);
   width: 100%;
   transition: all 0.3s ease;
 }
 
 .neoglass-input:focus {
   outline: none;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 0 15px var(--glass-shadow);
 }
 
 .neoglass-card {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--glass-bg);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px 0 var(--glass-shadow);
   border-radius: 10px;
   padding: 20px;
   margin: 10px;
   transition: all 0.3s ease;
+  color: var(--text-color);
 }
 
 .neoglass-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.45);
+  box-shadow: 0 12px 40px 0 var(--glass-hover-shadow);
 } 
